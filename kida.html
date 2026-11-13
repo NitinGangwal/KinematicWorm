@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>Mera Kida Game</title>
+    <style>
+        body { margin: 0; background: #1e1e1e; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; }
+        canvas { background: #111a24; border: 2px solid #00ffcc; border-radius: 8px; box-shadow: 0 0 20px rgba(0, 255, 204, 0.3); }
+        .info { position: absolute; top: 10px; color: #fff; font-size: 14px; opacity: 0.7; }
+    </style>
+</head>
+<body>
+    <div class="info">Apne mouse ko screen par ghumayein!</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Mouse coordinates tracking
+        let mouse = { x: 400, y: 300 };
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+
+        // Node class (Kide ka segment)
+        class Node {
+            constructor(x, y, length) {
+                this.x = x;
+                this.y = y;
+                this.length = length;
+                this.parent = null;
+            }
+        }
+
+        // LimSystem class (Original logic in JavaScript)
+        class LimSystem {
+            constructor(endNode, numNodes) {
+                this.nodes = [];
+                let current = endNode;
+                for (let i = 0; i < numNodes; i++) {
+                    if (!current) break;
+                    this.nodes.unshift(current);
+                    current = current.parent;
+                }
+            }
+
+            update(targetX, targetY) {
+                if (this.nodes.length === 0) return;
+                
+                // Head ko mouse target par set kiya
+                this.nodes[0].x = targetX;
+                this.nodes[0].y = targetY;
+
+                // Inverse Kinematics loop
+                for (let i = 1; i < this.nodes.length; i++) {
+                    let leader = this.nodes[i - 1];
+                    let follower = this.nodes[i];
+                    
+                    let dx = leader.x - follower.x;
+                    let dy = leader.y - follower.y;
+                    let angle = Math.atan2(dy, dx);
+
+                    follower.x = leader.x - Math.cos(angle) * follower.length;
+                    follower.y = leader.y - Math.sin(angle) * follower.length;
+                }
+            }
+
+            draw() {
+                // Kide ke segments ko lines aur circles se draw karna
+                for (let i = 0; i < this.nodes.length; i++) {
+                    let node = this.nodes[i];
+                    ctx.beginPath();
+                    // Head ka rang thoda alag (Bright Neon Cyan) aur body green
+                    ctx.fillStyle = i === 0 ? '#00ffcc' : '#39ff14';
+                    ctx.arc(node.x, node.y, i === 0 ? 10 : 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.closePath();
+                }
+            }
+        }
+
+        // Setup the creature
+        const numSegments = 25;
+        const segmentLength = 15;
+        let head = new Node(400, 300, segmentLength);
+        
+        let lastNode = head;
+        for (let i = 0; i < numSegments - 1; i++) {
+            let newNode = new Node(400, 300, segmentLength);
+            lastNode.parent = newNode;
+            lastNode = newNode;
+        }
+
+        const kida = new LimSystem(head, numSegments);
+
+        // Game Loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            kida.update(mouse.x, mouse.y);
+            kida.draw();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
